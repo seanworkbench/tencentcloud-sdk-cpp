@@ -25,7 +25,8 @@ HttpProfile::HttpProfile() :
     m_protocol(HttpProfile::Scheme::HTTPS),
     m_reqTimeout(TM_MINUTE_SECOND),
     m_connectTimeout(TM_MINUTE_SECOND),
-    m_keepAlive(false)
+    m_keepAlive(false),
+    m_streamCallback(nullptr)
 {
 }
 
@@ -82,3 +83,15 @@ bool HttpProfile::IsKeepAlive() const
 {
     return m_keepAlive;
 }
+
+
+void HttpProfile::SetHTTPStreamCallback(HttpStreamCallback callback){
+    m_streamCallback = std::move(callback);
+}
+
+HttpStreamCallback HttpProfile::GetHTTPStreamCallback(){
+    return m_streamCallback;
+}
+
+
+

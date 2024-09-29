@@ -165,6 +165,7 @@ HttpClient::HttpResponseOutcome AbstractClient::DoRequest(const std::string &act
     GenerateSignature(httpRequest);
     m_httpClient->SetReqTimeout(httpProfile.GetReqTimeout()*1000);
     m_httpClient->SetConnectTimeout(httpProfile.GetConnectTimeout()*1000);
+    m_httpClient->SetStreamCallback(httpProfile.GetHTTPStreamCallback());
 
     return m_httpClient->SendRequest(httpRequest);
 }

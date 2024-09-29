@@ -165,6 +165,10 @@ namespace TencentCloud
                      */
                     bool SearchInfoHasBeenSet() const;
 
+
+                    std::vector<std::string> SplitFullStreamedData(const std::string& data);
+                    CoreInternalOutcome ParseFinshStreamData(const std::string &data);
+                    void RemoveStrings(std::string& s, std::string p);
                 private:
 
                     /**

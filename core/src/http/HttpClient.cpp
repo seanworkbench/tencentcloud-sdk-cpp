@@ -32,11 +32,19 @@ using namespace TencentCloud;
 
 namespace
 {
+    struct HttpWriteUserData {
+        std::ostringstream *out;
+        HttpClient* client;
+    };
+
     size_t recvBody(char *ptr, size_t size, size_t nmemb, void *userdata)
     {
-        std::ostringstream &out = *static_cast<std::ostringstream*>(userdata);
-        out << std::string(ptr, nmemb*size);
-        return nmemb * size;
+        struct HttpWriteUserData *data = static_cast<struct HttpWriteUserData *>(userdata);
+        auto recv_size = nmemb * size;
+        *data->out << std::string(ptr,recv_size);
+        bool result = data->client->WriteStreamFunction(ptr);
+
+        return result? nmemb * size : 0;
     }
 
     size_t recvHeaders(char *buffer, size_t size, size_t nitems, void *userdata)
@@ -124,6 +132,19 @@ void HttpClient::SetProxy(const NetworkProxy &proxy)
     m_proxy = proxy;
 }
 
+void HttpClient::SetStreamCallback(HttpStreamCallback callback){
+    m_streamCallback = callback;
+}
+
+bool HttpClient::WriteStreamFunction(std::string user_data){
+    if (m_streamCallback){
+        return m_streamCallback(user_data);
+    }
+
+    return true;
+}
+
+
 HttpClient::HttpResponseOutcome HttpClient::SendRequest(const HttpRequest &request)
 {
     curl_easy_reset(m_curlHandle);
@@ -177,8 +198,13 @@ HttpClient::HttpResponseOutcome HttpClient::SendRequest(const HttpRequest &reque
     }
     curl_easy_setopt(m_curlHandle, CURLOPT_HTTPHEADER, header_list);
     std::ostringstream out;
-    curl_easy_setopt(m_curlHandle, CURLOPT_WRITEDATA, &out);
+    struct HttpWriteUserData data;
+    data.out = &out;
+    data.client = this;
+    curl_easy_setopt(m_curlHandle, CURLOPT_WRITEDATA, &data);
     curl_easy_setopt(m_curlHandle, CURLOPT_WRITEFUNCTION, recvBody);
+
+
     setCUrlProxy(m_curlHandle, m_proxy);
 
     char errbuf[CURL_ERROR_SIZE];

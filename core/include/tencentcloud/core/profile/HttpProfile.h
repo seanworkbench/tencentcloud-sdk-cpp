@@ -18,10 +18,13 @@
 #define TENCENTCLOUD_CORE_HTTPPROFILE_H_
 
 #include <string>
+#include <functional>
 
 namespace TencentCloud
 {
     static const int64_t TM_MINUTE_SECOND = 60;
+    typedef std::function<bool(std::string)> HttpStreamCallback;
+
 
     class HttpProfile
     {
@@ -48,6 +51,9 @@ namespace TencentCloud
         void SetKeepAlive(bool flag=false);
         bool IsKeepAlive() const;
         HttpProfile::Scheme GetProtocol() const;
+        void SetHTTPStreamCallback(HttpStreamCallback callback);
+        HttpStreamCallback GetHTTPStreamCallback();
+
 
         HttpProfile(const HttpProfile &o) :
             m_reqMethod(o.m_reqMethod),
@@ -55,7 +61,8 @@ namespace TencentCloud
             m_protocol(o.m_protocol),
             m_reqTimeout(o.m_reqTimeout),
             m_connectTimeout(o.m_connectTimeout),
-            m_keepAlive(o.m_keepAlive)
+            m_keepAlive(o.m_keepAlive),
+            m_streamCallback(o.m_streamCallback)
         {
         }
 
@@ -69,6 +76,7 @@ namespace TencentCloud
                 m_reqTimeout = o.m_reqTimeout;
                 m_connectTimeout = o.m_connectTimeout;
                 m_keepAlive = o.m_keepAlive;
+                m_streamCallback = o.m_streamCallback;
             }
             return *this;
         }
@@ -80,6 +88,7 @@ namespace TencentCloud
         int64_t m_reqTimeout;
         int64_t m_connectTimeout;
         bool m_keepAlive;
+        HttpStreamCallback m_streamCallback;
     };
 }
 

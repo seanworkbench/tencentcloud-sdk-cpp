@@ -17,6 +17,7 @@
 #include <tencentcloud/hunyuan/v20230901/HunyuanClient.h>
 #include <tencentcloud/core/Executor.h>
 #include <tencentcloud/core/Runnable.h>
+#include <iostream>
 
 using namespace TencentCloud;
 using namespace TencentCloud::Hunyuan::V20230901;
@@ -91,7 +92,13 @@ HunyuanClient::ChatCompletionsOutcome HunyuanClient::ChatCompletions(const ChatC
         auto r = outcome.GetResult();
         string payload = string(r.Body(), r.BodySize());
         ChatCompletionsResponse rsp = ChatCompletionsResponse();
-        auto o = rsp.Deserialize(payload);
+        TencentCloud::CoreInternalOutcome o;
+        if (request.GetStream()) {
+            o = rsp.ParseFinshStreamData(payload);
+        } else {
+            o = rsp.Deserialize(payload);
+        }
+
         if (o.IsSuccess())
             return ChatCompletionsOutcome(rsp);
         else

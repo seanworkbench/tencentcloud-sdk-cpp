@@ -19,6 +19,9 @@
 #include <tencentcloud/core/utils/rapidjson/writer.h>
 #include <tencentcloud/core/utils/rapidjson/stringbuffer.h>
 
+#include <algorithm>
+#include <vector>
+
 using TencentCloud::CoreInternalOutcome;
 using namespace TencentCloud::Hunyuan::V20230901::Model;
 using namespace std;
@@ -33,6 +36,95 @@ ChatCompletionsResponse::ChatCompletionsResponse() :
     m_moderationLevelHasBeenSet(false),
     m_searchInfoHasBeenSet(false)
 {
+}
+
+
+std::vector<std::string> ChatCompletionsResponse::SplitFullStreamedData(const std::string& data)  {
+    if (data.empty()) {
+        return {};
+    }
+
+    std::vector<std::string> split_data;
+    std::string temp;
+    std::istringstream iss(data);
+    while (std::getline(iss, temp)) {
+        if (temp.empty()) {
+            split_data.push_back(temp);
+        } else {
+            split_data.push_back(temp);
+        }
+    }
+
+    // remove empty strings from the vector
+    split_data.erase(std::remove_if(split_data.begin(), split_data.end(), [](const std::string& s) { return s.empty(); }), split_data.end());
+
+    return split_data;
+}
+
+void ChatCompletionsResponse::RemoveStrings(std::string& s, std::string p) {
+	std::string::size_type i = s.find(p);
+	while (i != std::string::npos) {
+		s.erase(i, p.length());
+		i = s.find(p, i);
+	}
+}
+
+CoreInternalOutcome ChatCompletionsResponse::ParseFinshStreamData(const std::string &data){
+    std::vector<std::string> data_lines = SplitFullStreamedData(data);
+
+    if (data_lines.empty()) {
+        return CoreInternalOutcome(Core::Error("response data is empty"));
+    }
+
+    std::vector<Choice> choices_list;
+    Message full_msg;
+    full_msg.SetRole("assistant");
+	for (auto& line : data_lines){
+        RemoveStrings(line, "data: ");
+
+        rapidjson::Document d;
+        d.Parse(line.c_str());
+        if (d.HasParseError() || !d.IsObject()){
+            return CoreInternalOutcome(Core::Error("response not json format"));
+        }
+
+        if (d.HasMember("Choices") && !d["Choices"].IsNull())
+        {
+            if (!d["Choices"].IsArray())
+                return CoreInternalOutcome(Core::Error("response `Choices` is not array type"));
+
+            const rapidjson::Value &tmpValue = d["Choices"];
+
+            for (rapidjson::Value::ConstValueIterator itr = tmpValue.Begin(); itr != tmpValue.End(); ++itr)
+            {
+                const rapidjson::Value &value = *itr;
+                string requestId = "";
+                if (value.HasMember("Delta") && !value["Delta"].IsNull())
+                {
+                    if (!value["Delta"].IsObject())
+                    {
+                        return CoreInternalOutcome(Core::Error("response `Choice.Delta` is not object type").SetRequestId(requestId));
+                    }
+
+                    Delta current_delta;
+                    CoreInternalOutcome outcome = current_delta.Deserialize(value["Delta"]);
+                    if (!outcome.IsSuccess())
+                    {
+                        outcome.GetError().SetRequestId(requestId);
+                        return outcome;
+                    }
+                    full_msg.SetContent(full_msg.GetContent() + current_delta.GetContent());
+                }
+            }
+        }
+    }
+
+    Choice item;
+    item.SetMessage(full_msg);
+    m_choices.push_back(item);
+    m_choicesHasBeenSet = true;
+
+    return CoreInternalOutcome(true);
 }
 
 CoreInternalOutcome ChatCompletionsResponse::Deserialize(const string &payload)

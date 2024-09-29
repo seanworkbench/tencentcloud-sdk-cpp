@@ -17,6 +17,7 @@
 #ifndef TENCENTCLOUD_CORE_HTTP_HTTPCLIENT_H_
 #define TENCENTCLOUD_CORE_HTTP_HTTPCLIENT_H_
 
+#include <functional>
 #include <curl/curl.h>
 #include <tencentcloud/core/Outcome.h>
 #include <tencentcloud/core/Error.h>
@@ -29,6 +30,8 @@ namespace TencentCloud
     {
     public:
         typedef Outcome<Core::Error, HttpResponse> HttpResponseOutcome;
+        typedef std::function<bool(std::string)> HttpStreamCallback;
+
 
         HttpClient();
         ~HttpClient();
@@ -40,6 +43,9 @@ namespace TencentCloud
 
         void SetProxy(const NetworkProxy &proxy);
 
+        void SetStreamCallback(HttpStreamCallback callback);
+        bool WriteStreamFunction(std::string user_data);
+
         static void InitGlobalState();
         static void CleanupGlobalState();
 
@@ -48,6 +54,7 @@ namespace TencentCloud
         int64_t m_reqTimeout;
         int64_t m_connectTimeout;
         NetworkProxy m_proxy;
+        HttpStreamCallback m_streamCallback;
 #ifdef ENABLE_COMPRESS_MODULE
         int GzipDecompress(const char *src, int srcLen, const char *dst, int* dstLen);
         bool TryDecompress(const char *src, int srcLen, std::string &decompressData);
