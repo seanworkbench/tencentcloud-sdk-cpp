@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <cstdint>
 #include <tencentcloud/core/AbstractModel.h>
 
 
